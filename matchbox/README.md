@@ -1,97 +1,79 @@
 # ParaBu Matchbox - Enterprise Trading Engine 🚀
 
-ParaBu Matchbox, kripto para borsaları için geliştirilmiş yüksek performanslı, dağıtık ve ölçeklenebilir bir eşleştirme motoru (Matching Engine) ve trade altyapısıdır. 
+**ParaBu Matchbox** is a high-throughput, distributed matching engine and market data execution core designed for institutional cryptocurrency exchanges.
 
-Sistem, Go (Golang) ile geliştirilmiş olup ACID uyumlu PostgreSQL cüzdan yönetimi, in-memory emir eşleştirme, Write-Ahead Log (WAL) ile Crash Recovery, Transactional Outbox Pattern ile asenkron olay yönetimi ve AI destekli duygu analizi içerir.
+Developed in **Go (Golang)**, it features ACID-compliant PostgreSQL ledger balance control, in-memory matching with Write-Ahead Log (WAL) crash recovery, Transactional Outbox pattern for asynchronous event publishing, and LLM-driven market sentiment analysis.
 
 ---
 
-## 🌟 Temel Özellikler (Core Features)
+## 🌟 Core Architecture & Features
 
 ### 1. In-Memory Matching Engine & Crash Recovery
-- **Actor Model:** Emirler in-memory kanallar üzerinden asenkron olarak işlenir. Thread-safe ve ultra düşük gecikmeli (low-latency) emir eşleme (Limit, Market).
-- **Write-Ahead Log (WAL):** Olası sistem kapanmalarına karşı (Crash) saniyenin kesirlerinde diske yazılan WAL dosyası ve belirli periyotlarla alınan Snapshot'lar sayesinde emir defterleri %100 sıfır veri kaybı ile saniyeler içinde RAM'e geri yüklenir.
-- **L2 Order Book:** Derinlik (Depth) verisi WebSocket üzerinden anlık olarak (real-time) istemcilere push edilir.
+- **Actor Model Matching:** Asynchronous in-memory channels enabling thread-safe, sub-millisecond execution for Limit and Market orders.
+- **Write-Ahead Log (WAL):** High-frequency disk logging paired with periodic snapshots ensures 100% zero data loss and instantaneous RAM recovery upon system reboot.
+- **L2 Order Book:** Real-time market depth broadcasted via Gorilla WebSockets to client applications.
 
-### 2. Transactional Outbox & Ledger
-- **ACID & Row-Level Locking:** PostgreSQL üzerinde `SERIALIZABLE` izolasyon seviyesi ve `FOR UPDATE` satır kilitlemeleri ile "Double Spending" engellenir.
-- **Transactional Outbox Pattern:** Veritabanına trade yazılırken "Dual-write" problemini engellemek için olaylar (event) aynı transaction içinde outbox tablosuna yazılır. Ayrı bir Go Worker bu tabloyu okuyarak mesaj kuyruklarına (Redis/NATS vb.) dağıtır.
-- **Optimistic Locking:** Emir girildiğinde fonlar önceden kilitlenir (Locked Balance), eşleşme anında tahsil edilir veya iptal anında serbest bırakılır.
+### 2. Transactional Outbox & Financial Ledger
+- **ACID Double-Entry Accounting:** Row-level locking (`FOR UPDATE`) on PostgreSQL prevents double-spending and balances funds atomically.
+- **Transactional Outbox Pattern:** Guarantees dual-write safety between database updates and event streams. A background worker periodically polls the outbox table to broadcast messages.
+- **Optimistic Fund Locking:** Balances are locked upon order creation, deducted on match completion, and released immediately upon cancellation.
 
 ### 3. AI Sentiment Engine
-- **LLM Entegrasyonu:** Gemini API kullanılarak piyasa haberleri ve duyurular asenkron bir worker havuzu üzerinden okunur. 
-- **Duygu Analizi:** Gelen haberler Bullish, Bearish, Neutral olarak sınıflandırılır ve piyasa etkisi (Impact Score 1-10) çıkarılarak WebSocket üzerinden istemcilere akıtılır (AI Feed).
+- **Google Gemini LLM Integration:** Market news headlines and macroeconomic data are parsed via an asynchronous worker pipeline.
+- **Sentiment Scoring:** Automated classification into Bullish, Bearish, or Neutral polarities, along with an Impact Score (1-10) streamed via WebSockets (`!news@sentiment`).
 
-### 4. Piyasa Verileri & TradingView (Data Feed)
-- **24H Ticker:** Redis ZSET (Sorted Set) üzerinden son 24 saatin $O(1)$ karmaşıklıkla High, Low, Volume, VWAP ve % Değişim hesaplamaları.
-- **UDF Endpoints:** Frontend'deki TradingView Lightweight Charts kütüphanesinin tüketebilmesi için tam uyumlu `/config`, `/symbols`, `/history`, `/time` handler'ları.
+### 4. Market Data & TradingView UDF Feed
+- **24H Ticker Analytics:** Redis Sorted Sets ($O(1)$ lookup) computing 24h High, Low, Volume, VWAP, and percentage change.
+- **UDF Endpoints:** Full specification compliance for TradingView charts (`/config`, `/symbols`, `/history`, `/time`).
 
-### 5. Güvenlik & Kimlik Doğrulama
-- **JWT & Refresh Token Rotation:** `golang-jwt/v5` ve Redis kullanılarak güvenli oturum yönetimi. Süresi dolan token'lar Redis tabanlı rotation ile yenilenir.
-- **Rate Limiting:** IP ve UserID bazlı, Redis "Sliding Window Log" algoritması ile çalışan Rate Limiter. (Örn: Emir API'leri saniyede max 10 istek, Global 60 istek/dk).
+### 5. Security & Authentication
+- **JWT & Refresh Token Rotation:** Secure session lifecycles using `golang-jwt/v5` backed by Redis token rotation.
+- **Sliding-Window Rate Limiting:** IP and User ID throttles safeguarding endpoints against high-concurrency spam.
 
-### 6. Gelişmiş Gözlemlenebilirlik (Observability)
-- **Prometheus Metrics:** `/metrics` endpoint'i üzerinden aktif websocket bağlantıları, emir eşleme süreleri ve HTTP istekleri metrikleri dışa sunulur.
-- **OpenTelemetry:** `otelgin` middleware'i ile dağıtık izleme (Distributed Tracing) desteği.
-- **WS Ping/Pong:** İstemci ve sunucu arasındaki ağ gecikmesini (Network Latency - ms) ölçmek için gerçek zamanlı ping-pong mesajlaşması.
+### 6. Observability
+- **Prometheus Metrics:** Exported on `/metrics` (active connections, execution latencies, HTTP throughput).
+- **OpenTelemetry Tracing:** Distributed transaction tracking with `otelgin`.
+- **WS Ping/Pong:** Real-time network latency probes.
 
-### 7. Sandbox: Geometric Brownian Motion Simulator
-- **Market Maker Bot:** Sistemde aktif veri olmadığında (test ortamı) devreye giren entegre simülatör.
-- **Gerçekçi Veri:** Geometric Brownian Motion (GBM) formülü kullanarak (Drift ve Volatility bazlı) fiyatları hesaplar.
-- **High Frequency Trading (HFT) Simülasyonu:** Saniyede 10 defa (her 100ms) gerçek limit emirlerini (Bid/Ask) eşleştirme motoruna ileterek Order Book'u derinleştirir.
-- **Graceful Cleanup:** Üretilen test verileri PostgreSQL'i kirletmemek için Redis Ring Buffer üzerinde tutulur ve uygulama kapatılırken otomatik temizlenir.
-
----
-
-## 💻 Frontend Dashboard (React)
-
-- **Saf Siyah ve Neon Yeşil Tasarım:** ParaBu Proje kurallarına uygun yüksek kontrastlı agresif karanlık mod arayüz.
-- **Order Book Heatmap:** Gerçek zamanlı gelen derinlik verilerinin görselleştirilmesi.
-- **Teknik İndikatörler (SMA, EMA, RSI):** WebSockets üzerinden gelen son fiyata göre istemci tarafında anlık render edilen indikatörler.
-- **Ticker Tape & Flash Effects:** Fiyat değişimlerinde yeşil/kırmızı pırıltı efektleri ve kayan fiyat barları.
+### 7. Geometric Brownian Motion (GBM) Simulator
+- **Integrated Market Maker:** Simulates realistic order book liquidity using Geometric Brownian Motion (drift and volatility formulas).
+- **HFT Flow:** Emits 10 limit orders per second (every 100ms) to populate live depth in test environments.
+- **Automated Teardown:** Test trades are kept on Redis Ring Buffers to keep persistent tables clean and are flushed on exit.
 
 ---
 
-## 🛠 Teknoloji Yığını (Tech Stack)
+## 🛠 Tech Stack
 
-- **Dil:** Go 1.23+
-- **Veritabanı:** PostgreSQL (pgx driver)
+- **Language:** Go 1.23+
+- **Database:** PostgreSQL (pgx driver)
 - **Cache & Pub/Sub:** Redis (go-redis/v9)
 - **Web Framework:** Gin (gin-gonic)
-- **Metrikler & İzleme:** Prometheus (client_golang), OpenTelemetry (otelgin)
+- **Metrics & Tracing:** Prometheus, OpenTelemetry
 - **WebSocket:** Gorilla WebSocket
-- **Sayısal Hesaplamalar:** Shopspring Decimal (Hassas finansal matematik)
-- **Frontend:** React, Vite, TailwindCSS, TradingView Lightweight Charts, Framer Motion
+- **Precision Math:** Shopspring Decimal
 
 ---
 
-## 🚀 Çalıştırma
+## 🚀 Getting Started
 
-### Bağımlılıklar
-- PostgreSQL sunucusu (5432)
-- Redis sunucusu (6379)
-- Node.js (Frontend için)
+### Prerequisites
+- PostgreSQL (port 5432)
+- Redis (port 6379)
+- Go 1.23+
 
-### Çevresel Değişkenler (.env)
+### Environment Configuration (.env)
 ```env
-DATABASE_URL=postgres://kullanici:sifre@localhost:5432/parabu_matchbox
+DATABASE_URL=postgres://user:password@localhost:5432/parabu_matchbox?sslmode=disable
 REDIS_ADDR=localhost:6379
 JWT_SECRET=super_secret_key
 GEMINI_API_KEY=your_gemini_api_key_here
+SANDBOX_MODE=true
+SANDBOX_CLEANUP_ON_EXIT=true
 ```
 
-### Başlatma (Backend)
+### Running the Engine
 ```bash
 cd matchbox
-go mod tidy
 go run ./cmd/matchbox
 ```
-
-### Başlatma (Frontend)
-```bash
-cd matchbox-ui
-npm install
-npm run dev
-```
-
-Sunucu başladığında REST & WS Gateway `:8080` portunda, Prometheus Metrics `:8081` portunda, Frontend arayüzü ise `:3001` portunda yayına girecektir.
+Server starts on `http://localhost:8080`.
