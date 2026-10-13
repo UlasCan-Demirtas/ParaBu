@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package matchbox.v1;
+
+option go_package = "matchbox/api/proto;pb";
+
+// MatchboxService defines the gRPC API for the matching engine.
+service MatchboxService {
+  // PlaceOrder submits a new order to the matching engine.
+  rpc PlaceOrder (PlaceOrderRequest) returns (PlaceOrderResponse);
+
+  // CancelOrder attempts to cancel an existing order.
+  rpc CancelOrder (CancelOrderRequest) returns (CancelOrderResponse);
+}
+
+// Side enum matches the domain types.Side
+enum Side {
+  SIDE_UNSPECIFIED = 0;
+  SIDE_BUY = 1;
+  SIDE_SELL = 2;
+}
+
+// OrderType enum matches the domain types.OrderType
+enum OrderType {
+  ORDER_TYPE_UNSPECIFIED = 0;
+  ORDER_TYPE_LIMIT = 1;
+  ORDER_TYPE_MARKET = 2;
+}
+
+message PlaceOrderRequest {
+  string symbol = 1;      // e.g., "BTC/USDT"
+  Side side = 2;
+  OrderType type = 3;
+  string price = 4;       // String representation of decimal
+  string quantity = 5;    // String representation of decimal
+}
+
+message PlaceOrderResponse {
+  string order_id = 1;    // UUID of the created order
+  string status = 2;      // NEW, PARTIALLY_FILLED, FILLED, REJECTED
+}
+
+message CancelOrderRequest {
+  string order_id = 1;
+  string symbol = 2;
+}
+
+message CancelOrderResponse {
+  bool success = 1;
+  string remaining_quantity = 2;
+  string reason = 3;
+}

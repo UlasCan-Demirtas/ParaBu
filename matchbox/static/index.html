@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matchbox HFT - Live Order Book</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">🔥</span>
+                <h1>Matchbox HFT Engine</h1>
+            </div>
+            <div class="status-indicator">
+                <div class="dot" id="connection-dot"></div>
+                <span id="connection-text">Connecting...</span>
+            </div>
+        </header>
+
+        <main class="dashboard">
+            <div class="panel order-book">
+                <div class="panel-header">
+                    <h2>Order Book (BTC/USDT)</h2>
+                </div>
+                
+                <div class="book-header">
+                    <span>Price (USDT)</span>
+                    <span>Quantity (BTC)</span>
+                    <span>Total (USDT)</span>
+                </div>
+
+                <!-- Asks (Sells) - Red -->
+                <div class="book-side asks" id="asks-container">
+                    <!-- Rows injected by JS -->
+                </div>
+
+                <div class="spread-indicator">
+                    <span id="current-price" class="current-price">--</span>
+                    <span id="spread-value" class="spread-value">Spread: --</span>
+                </div>
+
+                <!-- Bids (Buys) - Green -->
+                <div class="book-side bids" id="bids-container">
+                    <!-- Rows injected by JS -->
+                </div>
+            </div>
+
+            <div class="panel hft-controls">
+                <div class="panel-header">
+                    <h2>HFT Simulator</h2>
+                </div>
+                <div class="panel-body">
+                    <p class="description">
+                        This UI connects directly to the Go Matching Engine via WebSockets. 
+                        Start the simulator in your terminal to see real-time sub-millisecond matching!
+                    </p>
+                    <div class="code-block">
+                        <code>cd ~/Desktop/parabu/matchbox</code>
+                        <code>go run ./cmd/client</code>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-label">Latency</span>
+                            <span class="stat-value">~0.1ms</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Engine</span>
+                            <span class="stat-value">Actor/B-Tree</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

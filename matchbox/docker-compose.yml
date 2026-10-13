@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # NATS Message Broker
+  nats:
+    image: nats:latest
+    ports:
+      - "4222:4222"
+      - "8222:8222" # Management UI
+    command: ["-js"] # Enable JetStream (persistent streaming)
+
+  # Prometheus for Metrics
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  # Grafana for Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=paribu
+    depends_on:
+      - prometheus

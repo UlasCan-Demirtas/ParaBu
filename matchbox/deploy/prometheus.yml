@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 1s
+
+scrape_configs:
+  - job_name: 'matchbox-engine'
+    static_configs:
+      - targets: ['host.docker.internal:8081'] # We'll run metrics on 8081 locally
